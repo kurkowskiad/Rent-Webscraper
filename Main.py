@@ -1,4 +1,5 @@
 import requests
+import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
 
 class Offer:
@@ -54,7 +55,14 @@ class Scraper:
                         offer.link + "," + offer.phone + "," + offer.publication_date)
 
 
+def line_count(file):
+    with open(file, 'r') as f:
+        data=f.readlines()
+    return len(data)
+
 if __name__=="__main__":
     s = Scraper("Gliwice", max_price=1600, max_size=40)
     s.scrape_olx()
     s.export_to_file()
+    plt.plot(range(line_count("offers.csv")-1), [o.price_per_square_meter for o in s.offers])
+    plt.show()
