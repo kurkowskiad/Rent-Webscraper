@@ -40,10 +40,15 @@ class Scraper:
                 link = offer.find("a", {"class":"marginright5 link linkWithHash detailsLinkPromoted"})["href"]
             offer_page = requests.get(link)
             offer_soup = BeautifulSoup(offer_page.text, "html.parser")
+            try:
+                date = offer_soup.find("div",{"class":"offer-titlebox__details"}).findAllNext("em")[0].text.split(",")[1]
+            except AttributeError as e:
+                print(e)
+                date = ""
             container = offer_soup.find("div", {"class":"clr descriptioncontent marginbott20"})
             try:
                 size = container.find_all_next("tr")[6].find("td",{"class":"value"}).text.replace(" ","").replace(",",".").strip()[:-2]
-                self.offers.append(Offer(price=price, size=size, link=link))
+                self.offers.append(Offer(price=price, size=size, link=link, publication_date=date))
             except Exception as e:
                 print(e)
 
@@ -66,10 +71,10 @@ class Scraper:
 
     def export_to_file(self):
         with open("offers.csv", "w", encoding='utf-8') as f:
-            f.write("Price, Size, Price per m2, Link, Description, Phone, Publication date")
+            f.write("Price, Size, Price per m2, Link, Publication date")
             for offer in self.offers:
                 f.write(offer.price + "," + offer.size + "," + offer.price_per_square_meter + "," +
-                        offer.link + "," + offer.phone + "," + offer.publication_date)
+                        offer.link + "," + offer.publication_date)
 
 
 def line_count(file):
@@ -82,5 +87,8 @@ if __name__=="__main__":
     s.scrape_olx()
     s.scrape_otodom()
     s.export_to_file()
-    plt.plot(range(line_count("offers.csv")-1), [o.price_per_square_meter for o in s.offers])
+    list_per_meter = [float(o.price_per_square_meter) for o in s.offers]
+    plt.bar(range(line_count("offers.csv")-1), list_per_meter)
+    plt.yticks(range(0, 110, 10))
+    plt.axhline(sum(list_per_meter)/len(list_per_meter), xmin=0, xmax=len(list_per_meter), color='r')
     plt.show()
