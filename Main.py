@@ -31,7 +31,7 @@ class Scraper:
         soup = BeautifulSoup(page.text, "html.parser")
         container = soup.find("table", {"class":"fixed offers breakword redesigned"})
         offers = container.findAllNext("tr", {"class":"wrap"})
-        for count, offer in enumerate(offers):
+        for offer in offers:
             price = offer.find("p", {"class":"price"}).text.replace(" ","")[:-3]
             try:
                 link = offer.find("a", {"class":"marginright5 link linkWithHash detailsLink"})["href"]
@@ -46,6 +46,23 @@ class Scraper:
                 self.offers.append(Offer(price=price, size=size, link=link))
             except Exception as e:
                 print(e)
+
+    def scrape_otodom(self):
+        url = r"https://www.otodom.pl/wynajem/mieszkanie/" + self.city + "?search"
+        if self.max_price is not None:
+            url += r"&search%5Bfilter_float_price%3Ato%5D=" + str(self.max_price) + "&"
+        if self.max_size is not None:
+            url += r"&search%5Bfilter_float_m%3Ato%5D=" + str(self.max_size)
+
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text, "html.parser")
+        container = soup.find("div", {"class":"col-md-content section-listing__row-content"})
+        offers = container.findAllNext("article")
+        for offer in offers:
+            price = offer.find("li", {"class":"offer-item-price"}).text.replace(" ","").replace("zł","").replace("/mc","")
+            size = offer.find("li", {"class":"hidden-xs offer-item-area"}).text.replace(" ","").replace(",",".").strip()[:-2]
+            link = offer.find("a")["href"]
+            self.offers.append(Offer(price=price, size=size, link=link))
 
     def export_to_file(self):
         with open("offers.csv", "w", encoding='utf-8') as f:
@@ -63,6 +80,7 @@ def line_count(file):
 if __name__=="__main__":
     s = Scraper("Gliwice", max_price=1600, max_size=40)
     s.scrape_olx()
+    s.scrape_otodom()
     s.export_to_file()
     plt.plot(range(line_count("offers.csv")-1), [o.price_per_square_meter for o in s.offers])
     plt.show()
